@@ -254,6 +254,15 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 		}
 		writeTextTemplateFile(tmplStyle, filepath.Join(outputDir, styleFile), nil)
 	}
+
+	// .gitignore
+	file, err := os.Create(filepath.Join(outputDir, ".gitignore"))
+	if err != nil {
+		fmt.Println("error occurred:", err)
+		return
+	}
+	file.WriteString("*\n")
+	file.Close()
 }
 
 func main() {
