@@ -45,6 +45,7 @@ type Item struct {
 	Reached       uint
 	Missed        uint
 	Excluded      uint
+	Statement     uint // reached + missed
 	ReachedRanges []CoverRange
 	MissedRanges  []CoverRange
 	LineCover     []CoverType
@@ -348,6 +349,7 @@ func main() {
 	var lastCov CoverageResult
 	var reachedNum, totalReachedNum uint
 	var missedNum, totalMissedNum uint
+	var totalStatementNum uint
 	var reachedRanges, missedRanges []CoverRange
 	// var excludedNum, totalExcludedNum uint
 	var allNum, totalAllNum uint
@@ -365,9 +367,10 @@ func main() {
 
 			items[lastModule].Reached = reachedNum
 			items[lastModule].Missed = missedNum
+			items[lastModule].Statement = reachedNum + missedNum
 			items[lastModule].All = allNum
 			// items[lastModule].Excluded = allNum - reachedNum - missedNum
-			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(allNum) * 100))
+			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
 			items[lastModule].DisplayFile = lastModule
 			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
 
@@ -380,12 +383,13 @@ func main() {
 			if !lastCov.Reached {
 				allNum += 1
 			}
-			reachedNum = allNum - missedNum
+			// reachedNum = allNum - missedNum
 			items[lastModule].Reached = reachedNum
 			items[lastModule].Missed = missedNum
+			items[lastModule].Statement = reachedNum + missedNum
 			items[lastModule].All = allNum
 			// items[lastModule].Excluded = allNum - reachedNum - missedNum
-			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(allNum) * 100))
+			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
 			items[lastModule].DisplayFile = lastModule
 			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
 			items[lastModule].ReachedRanges = reachedRanges
@@ -395,6 +399,7 @@ func main() {
 
 			totalReachedNum += reachedNum
 			totalMissedNum += missedNum
+			totalStatementNum += reachedNum + missedNum
 			totalAllNum += allNum
 
 			reachedNum = 0
@@ -430,19 +435,30 @@ func main() {
 	if !lastCov.Reached {
 		allNum += 1
 	}
-	reachedNum = allNum - missedNum
+	// reachedNum = allNum - missedNum
 	items[lastModule].Reached = reachedNum
 	items[lastModule].Missed = missedNum
+	items[lastModule].Statement = reachedNum + missedNum
 	items[lastModule].All = allNum
 	// items[lastModule].Excluded = allNum - reachedNum - missedNum
-	items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(allNum) * 100.))
+	items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100.))
 	items[lastModule].DisplayFile = lastModule
 	items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
+	if lastCov.Reached {
+		reachedNum += lastCov.EndLine - lastCov.StartLine
+		reachedRanges = append(reachedRanges, CoverRange{lastCov.StartLine, lastCov.EndLine})
+	} else {
+		missedNum += lastCov.EndLine - lastCov.StartLine
+		missedRanges = append(missedRanges, CoverRange{lastCov.StartLine, lastCov.EndLine})
+	}
+	items[lastModule].ReachedRanges = reachedRanges
+	items[lastModule].MissedRanges = missedRanges
 	logger.Debug("last", "module", lastModule, "reach", reachedNum, "missed", missedNum, "all", allNum)
-	logger.Debug("last.percentage", "percentage", uint(math.Ceil(float64(reachedNum)/float64(allNum)*100.)))
+	logger.Debug("last.percentage", "percentage", uint(math.Ceil(float64(reachedNum)/float64(reachedNum+missedNum)*100.)))
 
 	totalReachedNum += reachedNum
 	totalMissedNum += missedNum
+	totalStatementNum += reachedNum + missedNum
 	totalAllNum += allNum
 
 	logger.Debug("total", "reach", totalReachedNum, "missed", totalMissedNum, "all", totalAllNum)
@@ -465,7 +481,7 @@ func main() {
 			Reached:    totalReachedNum,
 			Missed:     totalMissedNum,
 			Excluded:   totalAllNum - totalReachedNum - totalMissedNum,
-			Percentage: uint(math.Ceil(float64(totalReachedNum) / float64(totalAllNum) * 100)),
+			Percentage: uint(math.Ceil(float64(totalReachedNum) / float64(totalStatementNum) * 100)),
 		},
 		Items:     summaryItems,
 		CreatedAt: &now,

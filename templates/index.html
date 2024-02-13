@@ -63,7 +63,7 @@
         <tbody>
 			{{range .Items}}<tr class="file">
 				<td class="name left"><a href="{{.HtmlLink}}">{{.DisplayFile}}</a></td>
-				<td>{{.All}}</td>
+				<td>{{.Statement}}</td>
 				<td>{{.Missed}}</td>
 				<td>{{.Excluded}}</td>
 				<td class="right" data-ratio="{{.Reached}} {{.All}}">{{.Percentage}}%</td>{{end}}
