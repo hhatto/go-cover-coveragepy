@@ -18,14 +18,6 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-type CoverType uint
-
-const (
-	COVER_REACHED CoverType = 1 + iota
-	COVER_MISSED
-	COVER_EXCLUDED
-)
-
 type CoverageResult struct {
 	Module      string
 	StartLine   uint
@@ -48,7 +40,6 @@ type Item struct {
 	Statement     uint // reached + missed
 	ReachedRanges []CoverRange
 	MissedRanges  []CoverRange
-	LineCover     []CoverType
 	All           uint
 	DisplayFile   string
 	HtmlLink      string
