@@ -347,10 +347,10 @@ func main() {
 	for _, cov := range coverResults {
 		if lastModule == "" {
 			if cov.Reached {
-				reachedNum += cov.EndLine - cov.StartLine
+				reachedNum += cov.EndLine - cov.StartLine + 1
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
-				missedNum += cov.EndLine - cov.StartLine
+				missedNum += cov.EndLine - cov.StartLine + 1
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 			lastModule = cov.Module
@@ -403,17 +403,29 @@ func main() {
 
 			if cov.Reached {
 				reachedNum += cov.EndLine - cov.StartLine
+				if cov.StartLine != lastCov.EndLine {
+					reachedNum += 1
+				}
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
 				missedNum += cov.EndLine - cov.StartLine
+				if cov.StartLine != lastCov.EndLine {
+					missedNum += 1
+				}
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 		} else {
 			if cov.Reached {
 				reachedNum += cov.EndLine - cov.StartLine
+				if cov.StartLine != lastCov.EndLine {
+					reachedNum += 1
+				}
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
 				missedNum += cov.EndLine - cov.StartLine
+				if cov.StartLine != lastCov.EndLine {
+					missedNum += 1
+				}
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 		}
