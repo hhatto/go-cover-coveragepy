@@ -125,52 +125,49 @@ func parseGoMod(path string) string {
 	return packageName
 }
 
-func getLines(filename string) []string {
+func getLines(filename string) ([]string, error) {
+	lines := make([]string, 0)
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("error occured:", err)
-		return nil
+		return lines, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	lines := make([]string, 0)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
 
-	return lines
+	return lines, nil
 }
 
-func writeTemplateFile(tmpl *template.Template, filename string, data interface{}) {
+func writeTemplateFile(tmpl *template.Template, filename string, data interface{}) error {
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("error occured:", err)
-		return
+		return err
 	}
 	defer file.Close()
 	err = tmpl.Execute(file, data)
 	if err != nil {
-		fmt.Println("error occured:", err)
-		return
+		return err
 	}
+	return nil
 }
 
-func writeTextTemplateFile(tmpl *textTemplate.Template, filename string, data interface{}) {
+func writeTextTemplateFile(tmpl *textTemplate.Template, filename string, data interface{}) error {
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("error occured:", err)
-		return
+		return err
 	}
 	defer file.Close()
 	err = tmpl.Execute(file, data)
 	if err != nil {
-		fmt.Println("error occured:", err)
-		return
+		return err
 	}
+	return nil
 }
 
-func writeFiles(outputDir string, packageName string, items map[string]*Item, summary *Summary) {
+func writeFiles(outputDir string, packageName string, items map[string]*Item, summary *Summary) error {
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		os.Mkdir(outputDir, 0755)
 	}
@@ -185,15 +182,15 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 	// write index.html
 	tmplIndex, err := template.New("index.html").Funcs(funcMap).ParseFS(f, "templates/index.html")
 	if err != nil {
-		fmt.Println("error occurred:", err)
-		return
+		return err
 	}
-	writeTemplateFile(tmplIndex, filepath.Join(outputDir, "index.html"), summary)
+	if err := writeTemplateFile(tmplIndex, filepath.Join(outputDir, "index.html"), summary); err != nil {
+		return err
+	}
 
 	tmplFile, err := template.New("file.html").Funcs(funcMap).ParseFS(f, "templates/file.html")
 	if err != nil {
-		fmt.Println("error occurred:", err)
-		return
+		return err
 	}
 
 	// write files
@@ -211,7 +208,10 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 				filename = filename[1:]
 			}
 		}
-		lines := getLines(filename)
+		lines, err := getLines(filename)
+		if err != nil {
+			return err
+		}
 		for idx, line := range lines {
 			coverType := "pln"
 			if v.IsReached(uint(idx + 1)) {
@@ -226,11 +226,13 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 			})
 		}
 
-		writeTemplateFile(tmplFile, filepath.Join(outputDir, v.HtmlLink), &FileSummary{
+		if err := writeTemplateFile(tmplFile, filepath.Join(outputDir, v.HtmlLink), &FileSummary{
 			Item:      v,
 			Lines:     lineItems,
 			CreatedAt: summary.CreatedAt,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	// js, css, and more...
@@ -241,20 +243,22 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 	for _, styleFile := range styleFiles {
 		tmplStyle, err := textTemplate.ParseFS(f, "templates/"+styleFile)
 		if err != nil {
-			fmt.Println("error occurred:", err)
-			return
+			return err
 		}
-		writeTextTemplateFile(tmplStyle, filepath.Join(outputDir, styleFile), nil)
+		if err := writeTextTemplateFile(tmplStyle, filepath.Join(outputDir, styleFile), nil); err != nil {
+			return err
+		}
 	}
 
 	// .gitignore
 	file, err := os.Create(filepath.Join(outputDir, ".gitignore"))
 	if err != nil {
-		fmt.Println("error occurred:", err)
-		return
+		return err
 	}
 	file.WriteString("*\n")
 	file.Close()
+
+	return nil
 }
 
 func main() {
@@ -347,10 +351,10 @@ func main() {
 	for _, cov := range coverResults {
 		if lastModule == "" {
 			if cov.Reached {
-				reachedNum += cov.EndLine - cov.StartLine + 1
+				reachedNum += cov.EndLine - cov.StartLine
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
-				missedNum += cov.EndLine - cov.StartLine + 1
+				missedNum += cov.EndLine - cov.StartLine
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 			lastModule = cov.Module
@@ -403,29 +407,17 @@ func main() {
 
 			if cov.Reached {
 				reachedNum += cov.EndLine - cov.StartLine
-				if cov.StartLine != lastCov.EndLine {
-					reachedNum += 1
-				}
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
 				missedNum += cov.EndLine - cov.StartLine
-				if cov.StartLine != lastCov.EndLine {
-					missedNum += 1
-				}
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 		} else {
 			if cov.Reached {
 				reachedNum += cov.EndLine - cov.StartLine
-				if cov.StartLine != lastCov.EndLine {
-					reachedNum += 1
-				}
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
 				missedNum += cov.EndLine - cov.StartLine
-				if cov.StartLine != lastCov.EndLine {
-					missedNum += 1
-				}
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 		}
@@ -490,7 +482,9 @@ func main() {
 		CreatedAt: &now,
 	}
 	outputDir := "htmlcov"
-	writeFiles(outputDir, packageName, items, summary)
+	if err := writeFiles(outputDir, packageName, items, summary); err != nil {
+		os.Exit(1)
+	}
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println("error occured:", err)
