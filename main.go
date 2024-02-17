@@ -169,7 +169,9 @@ func writeTextTemplateFile(tmpl *textTemplate.Template, filename string, data in
 
 func writeFiles(outputDir string, packageName string, items map[string]*Item, summary *Summary) error {
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		os.Mkdir(outputDir, 0755)
+		if err := os.Mkdir(outputDir, 0755); err != nil {
+			return err
+		}
 	}
 
 	funcMap := template.FuncMap{
@@ -255,8 +257,12 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 	if err != nil {
 		return err
 	}
-	file.WriteString("*\n")
-	file.Close()
+	if _, err := file.WriteString("*\n"); err != nil {
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
 
 	return nil
 }
