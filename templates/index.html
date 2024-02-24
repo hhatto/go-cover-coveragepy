@@ -5,7 +5,9 @@
     <title>Coverage report</title>
     <link rel="icon" sizes="32x32" href="favicon_32.png">
     <link rel="stylesheet" href="style.css" type="text/css">
+    <link rel="stylesheet" href="bootstrap.min.css" type="text/css">
     <script type="text/javascript" src="coverage_html.js" defer></script>
+    <script type="text/javascript" src="bootstrap.bundle.min.js" defer></script>
 </head>
 <body class="indexfile">
 <header>
@@ -44,8 +46,7 @@
             <input id="filter" type="text" value="" placeholder="filter..." />
         </form>
         <p class="text">
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-			created at {{.CreatedAt | strftime}}
+            <a href="https://github.com/go-cover-coveragepy" class="text-reset">go-cover-coveragepy</a>, created at {{.CreatedAt | strftime}} <br />
         </p>
     </div>
 </header>
@@ -57,7 +58,7 @@
                 <th aria-sort="none" data-default-sort-order="descending" data-shortcut="s">statements</th>
                 <th aria-sort="none" data-default-sort-order="descending" data-shortcut="m">missing</th>
                 <th aria-sort="none" data-default-sort-order="descending" data-shortcut="x">excluded</th>
-                <th class="right" aria-sort="none" data-shortcut="c">coverage</th>
+                <th class="right" aria-sort="none" data-shortcut="c" style="width: 20em">coverage</th>
             </tr>
         </thead>
         <tbody>
@@ -66,7 +67,13 @@
 				<td>{{.Statement}}</td>
 				<td>{{.Missed}}</td>
 				<td>{{.Excluded}}</td>
-				<td class="right" data-ratio="{{.Reached}} {{.All}}">{{.Percentage}}%</td>{{end}}
+				<td class="right" data-ratio="{{.Reached}} {{.All}}">
+                    <div class="progress" style="margin-bottom:0;">
+                        <div class="progress-bar {{.Percentage | getProgressBarBgColor}} progress-bar-striped" role="progressbar" aria-valuenow="{{.Percentage}}" aria-valuemin="0" aria-valuemax="100" style="width:{{.Percentage}}%; padding-left:3px">
+                            {{.Percentage}}%
+                        </div>
+                    </div>
+                </td>{{end}}
             </tr>
         </tbody>
         <tfoot>
@@ -86,8 +93,8 @@
 <footer>
     <div class="content">
         <p>
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-			created at {{.CreatedAt | strftime}}
+            <a href="https://github.com/go-cover-coveragepy" class="text-reset">go-cover-coveragepy</a>, created at {{.CreatedAt | strftime}} <br />
+            The original HTML template used in this report is provided by <a href="https://coverage.readthedocs.io/en/" class="text-reset">coverage.py</a>.
         </p>
     </div>
 </footer>

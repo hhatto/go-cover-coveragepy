@@ -179,6 +179,14 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 			return a + b
 		},
 		"strftime": templateStrftime,
+		"getProgressBarBgColor": func(percentage uint) string {
+			if percentage < 30 {
+				return "bg-danger"
+			} else if percentage < 70 {
+				return "bg-warning"
+			}
+			return "bg-success"
+		},
 	}
 
 	// write index.html
@@ -241,6 +249,8 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 	styleFiles := []string{
 		"coverage_html.js",
 		"style.css",
+		"bootstrap.min.css",
+		"bootstrap.bundle.min.js",
 	}
 	for _, styleFile := range styleFiles {
 		tmplStyle, err := textTemplate.ParseFS(f, "templates/"+styleFile)
