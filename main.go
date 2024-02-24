@@ -499,6 +499,7 @@ func main() {
 	}
 	outputDir := "htmlcov"
 	if err := writeFiles(outputDir, packageName, items, summary); err != nil {
+		fmt.Println("error occurred:", err)
 		os.Exit(1)
 	}
 
