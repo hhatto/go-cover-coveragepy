@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -12,11 +13,28 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	textTemplate "text/template"
 	"time"
 
 	"golang.org/x/mod/modfile"
 )
+
+// functions for template
+var funcMap template.FuncMap = template.FuncMap{
+	"add": func(a int, b int) int {
+		return a + b
+	},
+	"strftime": templateStrftime,
+	"getProgressBarBgColor": func(percentage uint) string {
+		if percentage < 30 {
+			return "bg-danger"
+		} else if percentage < 70 {
+			return "bg-warning"
+		}
+		return "bg-success"
+	},
+}
 
 type CoverageResult struct {
 	Module      string
@@ -167,84 +185,7 @@ func writeTextTemplateFile(tmpl *textTemplate.Template, filename string, data in
 	return nil
 }
 
-func writeFiles(outputDir string, packageName string, items map[string]*Item, summary *Summary) error {
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		if err := os.Mkdir(outputDir, 0755); err != nil {
-			return err
-		}
-	}
-
-	funcMap := template.FuncMap{
-		"add": func(a int, b int) int {
-			return a + b
-		},
-		"strftime": templateStrftime,
-		"getProgressBarBgColor": func(percentage uint) string {
-			if percentage < 30 {
-				return "bg-danger"
-			} else if percentage < 70 {
-				return "bg-warning"
-			}
-			return "bg-success"
-		},
-	}
-
-	// write index.html
-	tmplIndex, err := template.New("index.html").Funcs(funcMap).ParseFS(f, "templates/index.html")
-	if err != nil {
-		return err
-	}
-	if err := writeTemplateFile(tmplIndex, filepath.Join(outputDir, "index.html"), summary); err != nil {
-		return err
-	}
-
-	tmplFile, err := template.New("file.html").Funcs(funcMap).ParseFS(f, "templates/file.html")
-	if err != nil {
-		return err
-	}
-
-	// write files
-	for _, v := range items {
-		var lineItems []*LineItem
-		var filename string
-		{
-			tmp := strings.Split(v.DisplayFile, packageName)
-			if len(tmp) > 1 {
-				filename = tmp[1]
-			} else {
-				filename = v.DisplayFile
-			}
-			if filename[0] == '/' {
-				filename = filename[1:]
-			}
-		}
-		lines, err := getLines(filename)
-		if err != nil {
-			return err
-		}
-		for idx, line := range lines {
-			coverType := "pln"
-			if v.IsReached(uint(idx + 1)) {
-				coverType = "run"
-			} else if v.IsMissed(uint(idx + 1)) {
-				coverType = "mis show_mis"
-			}
-			logger.Debug("file.reach", "reach", v.ReachedRanges, "miss", v.MissedRanges, "idx", idx, "line", line, "type", coverType)
-			lineItems = append(lineItems, &LineItem{
-				Text: line,
-				Type: coverType,
-			})
-		}
-
-		if err := writeTemplateFile(tmplFile, filepath.Join(outputDir, v.HtmlLink), &FileSummary{
-			Item:      v,
-			Lines:     lineItems,
-			CreatedAt: summary.CreatedAt,
-		}); err != nil {
-			return err
-		}
-	}
-
+func writeStaticFiles(outputDir string) error {
 	// js, css, and more...
 	styleFiles := []string{
 		"coverage_html.js",
@@ -275,6 +216,94 @@ func writeFiles(outputDir string, packageName string, items map[string]*Item, su
 	}
 
 	return nil
+}
+
+func writeIndexFile(outputDir string, packageName string, items map[string]*Item, summary *Summary) error {
+	// write index.html
+	tmplIndex, err := template.New("index.html").Funcs(funcMap).ParseFS(f, "templates/index.html")
+	if err != nil {
+		return err
+	}
+	if err := writeTemplateFile(tmplIndex, filepath.Join(outputDir, "index.html"), summary); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeProfileFile(tmplFile *template.Template, outputFilename, packageName string, item *Item, createdAt *time.Time) error {
+	var lineItems []*LineItem
+	var filename string
+	{
+		tmp := strings.Split(item.DisplayFile, packageName)
+		if len(tmp) > 1 {
+			filename = tmp[1]
+		} else {
+			filename = item.DisplayFile
+		}
+		if filename[0] == '/' {
+			filename = filename[1:]
+		}
+	}
+	lines, err := getLines(filename)
+	if err != nil {
+		return err
+	}
+	for idx, line := range lines {
+		coverType := "pln"
+		if item.IsReached(uint(idx + 1)) {
+			coverType = "run"
+		} else if item.IsMissed(uint(idx + 1)) {
+			coverType = "mis show_mis"
+		}
+		logger.Debug("file.reach", "reach", item.ReachedRanges, "miss", item.MissedRanges, "idx", idx, "line", line, "type", coverType)
+		lineItems = append(lineItems, &LineItem{
+			Text: line,
+			Type: coverType,
+		})
+	}
+
+	if err := writeTemplateFile(tmplFile, outputFilename, &FileSummary{
+		Item:      item,
+		Lines:     lineItems,
+		CreatedAt: createdAt,
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type WorkerProcessRequest struct {
+	tmplFile       *template.Template
+	outputFilename string
+	packageName    string
+	item           *Item
+}
+
+func startWorker(ctx context.Context, wg *sync.WaitGroup, num int) (requestch chan *WorkerProcessRequest) {
+	requestch = make(chan *WorkerProcessRequest)
+
+	for i := 0; i < num; i++ {
+		go func() {
+			for {
+				select {
+				case req := <-requestch:
+					logger.Debug("worker", "path", req.outputFilename)
+					now := time.Now()
+					writeProfileFile(req.tmplFile, req.outputFilename, req.packageName, req.item, &now)
+					// err = handleOutput(req.path, contents, result)
+					// if err != nil {
+					// 	log.Fatal(err)
+					// }
+					wg.Done()
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	return
 }
 
 func main() {
@@ -354,6 +383,27 @@ func main() {
 		coverResults = append(coverResults, cov)
 	}
 
+	outputDir := "htmlcov"
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		if err := os.Mkdir(outputDir, 0755); err != nil {
+			fmt.Println("error occurred:", err)
+			os.Exit(1)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	jobs := 4
+	wg := &sync.WaitGroup{}
+	worker := startWorker(ctx, wg, jobs)
+
+	tmplFile, err := template.New("file.html").Funcs(funcMap).ParseFS(f, "templates/file.html")
+	if err != nil {
+		fmt.Println("error occurred:", err)
+		os.Exit(1)
+	}
+
 	// summarize
 	items := make(map[string]*Item)
 	var lastModule string
@@ -407,6 +457,14 @@ func main() {
 			items[lastModule].MissedRanges = missedRanges
 
 			logger.Debug("summary", "module", lastModule, "start", reachedNum, "end", missedNum)
+
+			wg.Add(1)
+			worker <- &WorkerProcessRequest{
+				tmplFile:       tmplFile,
+				outputFilename: filepath.Join(outputDir, items[lastModule].HtmlLink),
+				packageName:    packageName,
+				item:           items[lastModule],
+			}
 
 			totalReachedNum += reachedNum
 			totalMissedNum += missedNum
@@ -467,6 +525,14 @@ func main() {
 	logger.Debug("last", "module", lastModule, "reach", reachedNum, "missed", missedNum, "all", allNum)
 	logger.Debug("last.percentage", "percentage", uint(math.Ceil(float64(reachedNum)/float64(reachedNum+missedNum)*100.)))
 
+	wg.Add(1)
+	worker <- &WorkerProcessRequest{
+		tmplFile:       tmplFile,
+		outputFilename: filepath.Join(outputDir, items[lastModule].HtmlLink),
+		packageName:    packageName,
+		item:           items[lastModule],
+	}
+
 	totalReachedNum += reachedNum
 	totalMissedNum += missedNum
 	totalStatementNum += reachedNum + missedNum
@@ -497,11 +563,18 @@ func main() {
 		Items:     summaryItems,
 		CreatedAt: &now,
 	}
-	outputDir := "htmlcov"
-	if err := writeFiles(outputDir, packageName, items, summary); err != nil {
+
+	if err := writeIndexFile(outputDir, packageName, items, summary); err != nil {
 		fmt.Println("error occurred:", err)
 		os.Exit(1)
 	}
+
+	if err := writeStaticFiles(outputDir); err != nil {
+		fmt.Println("error occurred:", err)
+		os.Exit(1)
+	}
+
+	wg.Wait()
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println("error occured:", err)
