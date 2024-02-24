@@ -29,20 +29,10 @@
                         &nbsp; toggle line displays
                     </p>
                     <p>
-                        <kbd>j</kbd>
-                        <kbd>k</kbd>
-                        &nbsp; next/prev highlighted chunk
-                    </p>
-                    <p>
                         <kbd>0</kbd> &nbsp; (zero) top of page
                     </p>
                     <p>
                         <kbd>1</kbd> &nbsp; (one) first highlighted chunk
-                    </p>
-                    <p>
-                        <kbd>[</kbd>
-                        <kbd>]</kbd>
-                        &nbsp; prev/next file
                     </p>
                     <p>
                         <kbd>u</kbd> &nbsp; up to the index
@@ -60,20 +50,13 @@
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
-            <a id="prevFileLink" class="nav" href="d_c2f2d505d7a887a6_contributions_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="d_c2f2d505d7a887a6_wallet_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-			created at {{.CreatedAt | strftime}}
+            <a href="https://github.com/go-cover-coveragepy" class="text-reset">go-cover-coveragepy</a>, created at {{.CreatedAt | strftime}} <br />
         </p>
         <aside class="hidden">
-            <button type="button" class="button_next_chunk" data-shortcut="j"/>
-            <button type="button" class="button_prev_chunk" data-shortcut="k"/>
             <button type="button" class="button_top_of_page" data-shortcut="0"/>
             <button type="button" class="button_first_chunk" data-shortcut="1"/>
-            <button type="button" class="button_prev_file" data-shortcut="["/>
-            <button type="button" class="button_next_file" data-shortcut="]"/>
             <button type="button" class="button_to_index" data-shortcut="u"/>
             <button type="button" class="button_show_hide_help" data-shortcut="?"/>
         </aside>
@@ -88,12 +71,10 @@
 <footer>
     <div class="content">
         <p>
-            <a id="prevFileLink" class="nav" href="d_c2f2d505d7a887a6_contributions_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="d_c2f2d505d7a887a6_wallet_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-			created at {{.CreatedAt | strftime}}
+            <a href="https://github.com/go-cover-coveragepy" class="text-reset">go-cover-coveragepy</a>, created at {{.CreatedAt | strftime}} <br />
+            The original HTML template used in this report is provided by <a href="https://coverage.readthedocs.io/en/" class="text-reset">coverage.py</a>.
         </p>
     </div>
 </footer>
