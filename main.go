@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"embed"
+	"flag"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -307,16 +308,34 @@ func startWorker(ctx context.Context, wg *sync.WaitGroup, num int) (requestch ch
 }
 
 func main() {
-	level := new(slog.LevelVar)
-	level.Set(slog.LevelInfo)
-	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
-	logger = slog.New(handler)
+	helpFlag := flag.Bool("h", false, "Show help")
+	debugFlag := flag.Bool("d", false, "Enable debug mode")
+	outputDir := flag.String("o", "htmlcov", "Output directory")
 
-	if len(os.Args) < 2 {
-		fmt.Println("usage: go run main.go <file>")
+	flag.Parse()
+
+	if *helpFlag {
+		fmt.Printf("Usage: go run main.go [-d] [-o <output directory>] <COVER_FILE>\n\n")
+		flag.PrintDefaults()
 		return
 	}
-	filename := os.Args[1]
+
+	if flag.NArg() < 1 {
+		fmt.Printf("Usage: go run main.go [-d] [-o <output directory>] <COVER_FILE>\n\n")
+		flag.PrintDefaults()
+		return
+	}
+
+	filename := flag.Arg(0)
+
+	level := new(slog.LevelVar)
+	if *debugFlag {
+		level.Set(slog.LevelDebug)
+	} else {
+		level.Set(slog.LevelInfo)
+	}
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+	logger = slog.New(handler)
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -383,9 +402,8 @@ func main() {
 		coverResults = append(coverResults, cov)
 	}
 
-	outputDir := "htmlcov"
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		if err := os.Mkdir(outputDir, 0755); err != nil {
+	if _, err := os.Stat(*outputDir); os.IsNotExist(err) {
+		if err := os.Mkdir(*outputDir, 0755); err != nil {
 			fmt.Println("error occurred:", err)
 			os.Exit(1)
 		}
@@ -461,7 +479,7 @@ func main() {
 			wg.Add(1)
 			worker <- &WorkerProcessRequest{
 				tmplFile:       tmplFile,
-				outputFilename: filepath.Join(outputDir, items[lastModule].HtmlLink),
+				outputFilename: filepath.Join(*outputDir, items[lastModule].HtmlLink),
 				packageName:    packageName,
 				item:           items[lastModule],
 			}
@@ -528,7 +546,7 @@ func main() {
 	wg.Add(1)
 	worker <- &WorkerProcessRequest{
 		tmplFile:       tmplFile,
-		outputFilename: filepath.Join(outputDir, items[lastModule].HtmlLink),
+		outputFilename: filepath.Join(*outputDir, items[lastModule].HtmlLink),
 		packageName:    packageName,
 		item:           items[lastModule],
 	}
@@ -564,12 +582,12 @@ func main() {
 		CreatedAt: &now,
 	}
 
-	if err := writeIndexFile(outputDir, packageName, items, summary); err != nil {
+	if err := writeIndexFile(*outputDir, packageName, items, summary); err != nil {
 		fmt.Println("error occurred:", err)
 		os.Exit(1)
 	}
 
-	if err := writeStaticFiles(outputDir); err != nil {
+	if err := writeStaticFiles(*outputDir); err != nil {
 		fmt.Println("error occurred:", err)
 		os.Exit(1)
 	}
