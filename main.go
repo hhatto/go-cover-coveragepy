@@ -291,11 +291,9 @@ func startWorker(ctx context.Context, wg *sync.WaitGroup, num int) (requestch ch
 				case req := <-requestch:
 					logger.Debug("worker", "path", req.outputFilename)
 					now := time.Now()
-					writeProfileFile(req.tmplFile, req.outputFilename, req.packageName, req.item, &now)
-					// err = handleOutput(req.path, contents, result)
-					// if err != nil {
-					// 	log.Fatal(err)
-					// }
+					if err := writeProfileFile(req.tmplFile, req.outputFilename, req.packageName, req.item, &now); err != nil {
+						logger.Error("write profile file error", "error", err)
+					}
 					wg.Done()
 				case <-ctx.Done():
 					return
