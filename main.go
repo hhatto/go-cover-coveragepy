@@ -338,7 +338,7 @@ func main() {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("usage: go run main.go <file>")
+		fmt.Println("file opne error:", err)
 		return
 	}
 	defer file.Close()
