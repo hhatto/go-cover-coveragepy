@@ -309,6 +309,7 @@ func main() {
 	helpFlag := flag.Bool("h", false, "Show help")
 	debugFlag := flag.Bool("d", false, "Enable debug mode")
 	outputDir := flag.String("o", "htmlcov", "Output directory")
+	jobs := flag.Int("jobs", 4, "Number of jobs")
 
 	flag.Parse()
 
@@ -410,9 +411,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	jobs := 4
 	wg := &sync.WaitGroup{}
-	worker := startWorker(ctx, wg, jobs)
+	worker := startWorker(ctx, wg, *jobs)
 
 	tmplFile, err := template.New("file.html").Funcs(funcMap).ParseFS(f, "templates/file.html")
 	if err != nil {
