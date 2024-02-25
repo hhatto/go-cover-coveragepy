@@ -32,4 +32,4 @@ go-cover-coveragepy -o report_html COVER.out
 
 ## License
 
-
+Apache 2.0 License
