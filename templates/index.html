@@ -67,7 +67,7 @@
 				<td>{{.Statement}}</td>
 				<td>{{.Missed}}</td>
 				<td>{{.Excluded}}</td>
-				<td class="right" data-ratio="{{.Reached}} {{.All}}">
+				<td class="right" data-ratio="{{.Reached}} {{.Statement}}">
                     <div class="progress" style="margin-bottom:0;">
                         <div class="progress-bar {{.Percentage | getProgressBarBgColor}} progress-bar-striped" role="progressbar" aria-valuenow="{{.Percentage}}" aria-valuemin="0" aria-valuemax="100" style="width:{{.Percentage}}%; padding-left:3px">
                             {{.Percentage}}%
@@ -82,7 +82,7 @@
 				<td>{{.Total.Reached}}</td>
 				<td>{{.Total.Missed}}</td>
 				<td>{{.Total.Excluded}}</td>
-				<td class="right" data-ratio="{{.Total.Reached}} {{.Total.All}}">{{.Total.Percentage}}%</td>
+				<td class="right" data-ratio="{{.Total.Reached}} {{.Total.Statement}}">{{.Total.Percentage}}%</td>
             </tr>
         </tfoot>
     </table>

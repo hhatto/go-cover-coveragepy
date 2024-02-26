@@ -90,6 +90,7 @@ type LineItem struct {
 
 type TotalItem struct {
 	Percentage uint // 0-100
+	Statement  uint
 	Reached    uint
 	Missed     uint
 	Excluded   uint
@@ -571,6 +572,7 @@ func main() {
 		Mode: mode,
 		Total: TotalItem{
 			All:        totalAllNum,
+			Statement:  totalStatementNum,
 			Reached:    totalReachedNum,
 			Missed:     totalMissedNum,
 			Excluded:   totalAllNum - totalReachedNum - totalMissedNum,
