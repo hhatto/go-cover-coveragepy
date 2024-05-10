@@ -396,7 +396,7 @@ func main() {
 			StartColumn: uint(startColumn),
 			EndLine:     uint(endLine),
 			EndColumn:   uint(endColumn),
-			Reached:     reached == "1",
+			Reached:     reached != "0",
 		}
 
 		coverResults = append(coverResults, cov)
