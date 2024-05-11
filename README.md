@@ -12,7 +12,7 @@ The original HTML template used in this report is provided by coverage.py.
 require Go 1.21+
 
 ```console
-go install github.com/hhatto/go-cover-coveragepy@main
+go install github.com/hhatto/go-cover-coveragepy@latest
 ```
 
 ## Usage
