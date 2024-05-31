@@ -220,7 +220,7 @@ func writeStaticFiles(outputDir string) error {
 	return nil
 }
 
-func writeIndexFile(outputDir string, packageName string, items map[string]*Item, summary *Summary) error {
+func writeIndexFile(outputDir string, summary *Summary) error {
 	// write index.html
 	tmplIndex, err := template.New("index.html").Funcs(funcMap).ParseFS(f, "templates/index.html")
 	if err != nil {
@@ -582,7 +582,7 @@ func main() {
 		CreatedAt: &now,
 	}
 
-	if err := writeIndexFile(*outputDir, packageName, items, summary); err != nil {
+	if err := writeIndexFile(*outputDir, summary); err != nil {
 		fmt.Println("error occurred:", err)
 		os.Exit(1)
 	}
