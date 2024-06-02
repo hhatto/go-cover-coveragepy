@@ -448,7 +448,7 @@ func main() {
 			items[lastModule].Statement = reachedNum + missedNum
 			items[lastModule].All = allNum
 			// items[lastModule].Excluded = allNum - reachedNum - missedNum
-			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
+			items[lastModule].Percentage = uint(math.Round(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
 			items[lastModule].DisplayFile = lastModule
 			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
 
@@ -527,7 +527,7 @@ func main() {
 	items[lastModule].Statement = reachedNum + missedNum
 	items[lastModule].All = allNum
 	// items[lastModule].Excluded = allNum - reachedNum - missedNum
-	items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100.))
+	items[lastModule].Percentage = uint(math.Round(float64(reachedNum) / float64(reachedNum+missedNum) * 100.))
 	items[lastModule].DisplayFile = lastModule
 	items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
 	if lastCov.Reached {
@@ -540,7 +540,7 @@ func main() {
 	items[lastModule].ReachedRanges = reachedRanges
 	items[lastModule].MissedRanges = missedRanges
 	logger.Debug("last", "module", lastModule, "reach", reachedNum, "missed", missedNum, "all", allNum)
-	logger.Debug("last.percentage", "percentage", uint(math.Ceil(float64(reachedNum)/float64(reachedNum+missedNum)*100.)))
+	logger.Debug("last.percentage", "percentage", uint(math.Round(float64(reachedNum)/float64(reachedNum+missedNum)*100.)))
 
 	wg.Add(1)
 	worker <- &WorkerProcessRequest{
@@ -576,7 +576,7 @@ func main() {
 			Reached:    totalReachedNum,
 			Missed:     totalMissedNum,
 			Excluded:   totalAllNum - totalReachedNum - totalMissedNum,
-			Percentage: uint(math.Ceil(float64(totalReachedNum) / float64(totalStatementNum) * 100)),
+			Percentage: uint(math.Round(float64(totalReachedNum) / float64(totalStatementNum) * 100)),
 		},
 		Items:     summaryItems,
 		CreatedAt: &now,
