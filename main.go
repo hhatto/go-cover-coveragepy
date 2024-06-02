@@ -27,10 +27,14 @@ var funcMap template.FuncMap = template.FuncMap{
 		return a + b
 	},
 	"strftime": templateStrftime,
-	"getProgressBarBgColor": func(percentage uint) string {
-		if percentage < 30 {
+	"getProgressBarBgColor": func(percentageStr string) string {
+		percentage, err := strconv.ParseFloat(percentageStr, 64)
+		if err != nil {
+			return ""
+		}
+		if percentage < 30. {
 			return "bg-danger"
-		} else if percentage < 70 {
+		} else if percentage < 70. {
 			return "bg-warning"
 		}
 		return "bg-success"
@@ -53,14 +57,13 @@ type CoverRange struct {
 }
 
 type Item struct {
-	Percentage    uint // 0-100
+	Percentage    string // 0-100(with precision)
 	Reached       uint
 	Missed        uint
 	Excluded      uint
 	Statement     uint // reached + missed
 	ReachedRanges []CoverRange
 	MissedRanges  []CoverRange
-	All           uint
 	DisplayFile   string
 	HtmlLink      string
 }
@@ -90,12 +93,11 @@ type LineItem struct {
 }
 
 type TotalItem struct {
-	Percentage uint // 0-100
+	Percentage string // 0-100(with precision)
 	Statement  uint
 	Reached    uint
 	Missed     uint
 	Excluded   uint
-	All        uint
 }
 
 type Summary struct {
@@ -311,6 +313,7 @@ func main() {
 	helpFlag := flag.Bool("h", false, "Show help")
 	debugFlag := flag.Bool("d", false, "Enable debug mode")
 	outputDir := flag.String("o", "htmlcov", "Output directory")
+	precisionFlag := flag.Int("precision", 0, "Set precision of report percentage")
 	jobs := flag.Int("jobs", 4, "Number of jobs")
 
 	flag.Parse()
@@ -438,7 +441,6 @@ func main() {
 	var totalStatementNum uint
 	var reachedRanges, missedRanges []CoverRange
 	// var excludedNum, totalExcludedNum uint
-	var allNum, totalAllNum uint
 	for _, cov := range coverResults {
 		if lastModule == "" {
 			// first cover line
@@ -452,24 +454,24 @@ func main() {
 			lastModule = cov.Module
 			items[cov.Module] = &Item{}
 
-			items[lastModule].Reached = reachedNum
-			items[lastModule].Missed = missedNum
-			items[lastModule].Statement = reachedNum + missedNum
-			items[lastModule].All = allNum
-			items[lastModule].Percentage = uint(math.Round(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
-			items[lastModule].DisplayFile = lastModule
-			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
-
-			totalReachedNum += reachedNum
-			totalMissedNum += missedNum
-			totalAllNum += allNum
+			items[cov.Module].Reached = reachedNum
+			items[cov.Module].Missed = missedNum
+			items[cov.Module].Statement = reachedNum + missedNum
+			items[cov.Module].Percentage = getPercentageValue(
+				float64(reachedNum)/float64(reachedNum+missedNum)*100,
+				*precisionFlag,
+			)
+			items[cov.Module].DisplayFile = lastModule
+			items[cov.Module].HtmlLink = flattenFilename(lastModule) + ".html"
 		} else if lastModule != "" && lastModule != cov.Module {
 			// for old module
 			items[lastModule].Reached = reachedNum
 			items[lastModule].Missed = missedNum
 			items[lastModule].Statement = reachedNum + missedNum
-			items[lastModule].All = allNum
-			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
+			items[lastModule].Percentage = getPercentageValue(
+				float64(reachedNum)/float64(reachedNum+missedNum)*100,
+				*precisionFlag,
+			)
 			items[lastModule].DisplayFile = lastModule
 			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
 			items[lastModule].ReachedRanges = reachedRanges
@@ -485,11 +487,9 @@ func main() {
 				item:           items[lastModule],
 			}
 
-			allNum = cov.StmtCount
 			totalReachedNum += reachedNum
 			totalMissedNum += missedNum
 			totalStatementNum += reachedNum + missedNum
-			totalAllNum += allNum
 
 			reachedNum = 0
 			missedNum = 0
@@ -520,29 +520,18 @@ func main() {
 	}
 
 	// care of last item
-	allNum = lastCov.EndLine
-	if !lastCov.Reached {
-		allNum += 1
-	}
-	// reachedNum = allNum - missedNum
 	items[lastModule].Reached = reachedNum
 	items[lastModule].Missed = missedNum
 	items[lastModule].Statement = reachedNum + missedNum
-	items[lastModule].All = allNum
-	// items[lastModule].Excluded = allNum - reachedNum - missedNum
-	items[lastModule].Percentage = uint(math.Round(float64(reachedNum) / float64(reachedNum+missedNum) * 100.))
+	items[lastModule].Percentage = getPercentageValue(
+		float64(reachedNum)/float64(reachedNum+missedNum)*100.,
+		*precisionFlag,
+	)
 	items[lastModule].DisplayFile = lastModule
 	items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
-	if lastCov.Reached {
-		reachedNum += lastCov.EndLine - lastCov.StartLine
-		reachedRanges = append(reachedRanges, CoverRange{lastCov.StartLine, lastCov.EndLine})
-	} else {
-		missedNum += lastCov.EndLine - lastCov.StartLine
-		missedRanges = append(missedRanges, CoverRange{lastCov.StartLine, lastCov.EndLine})
-	}
 	items[lastModule].ReachedRanges = reachedRanges
 	items[lastModule].MissedRanges = missedRanges
-	logger.Debug("last", "module", lastModule, "reach", reachedNum, "missed", missedNum, "all", allNum)
+	logger.Debug("last", "module", lastModule, "reach", reachedNum, "missed", missedNum)
 	logger.Debug("last.percentage", "percentage", uint(math.Round(float64(reachedNum)/float64(reachedNum+missedNum)*100.)))
 
 	wg.Add(1)
@@ -556,9 +545,8 @@ func main() {
 	totalReachedNum += reachedNum
 	totalMissedNum += missedNum
 	totalStatementNum += reachedNum + missedNum
-	totalAllNum += allNum
 
-	logger.Debug("total", "reach", totalReachedNum, "missed", totalMissedNum, "all", totalAllNum)
+	logger.Debug("total", "reach", totalReachedNum, "missed", totalMissedNum, "all(stmt)", lastCov.StmtCount)
 
 	summaryItems := make([]*Item, 0, len(items))
 	for _, v := range items {
@@ -574,12 +562,14 @@ func main() {
 	summary := &Summary{
 		Mode: mode,
 		Total: TotalItem{
-			All:        totalAllNum,
-			Statement:  totalStatementNum,
-			Reached:    totalReachedNum,
-			Missed:     totalMissedNum,
-			Excluded:   totalAllNum - totalReachedNum - totalMissedNum,
-			Percentage: uint(math.Round(float64(totalReachedNum) / float64(totalStatementNum) * 100)),
+			Statement: totalStatementNum,
+			Reached:   totalReachedNum,
+			Missed:    totalMissedNum,
+			Excluded:  totalStatementNum - totalReachedNum - totalMissedNum,
+			Percentage: getPercentageValue(
+				float64(totalReachedNum)/float64(totalStatementNum)*100,
+				*precisionFlag,
+			),
 		},
 		Items:     summaryItems,
 		CreatedAt: &now,
