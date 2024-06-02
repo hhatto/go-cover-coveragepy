@@ -458,7 +458,8 @@ func main() {
 			items[cov.Module].Missed = missedNum
 			items[cov.Module].Statement = reachedNum + missedNum
 			items[cov.Module].Percentage = getPercentageValue(
-				float64(reachedNum)/float64(reachedNum+missedNum)*100,
+				reachedNum,
+				reachedNum+missedNum,
 				*precisionFlag,
 			)
 			items[cov.Module].DisplayFile = lastModule
@@ -469,7 +470,8 @@ func main() {
 			items[lastModule].Missed = missedNum
 			items[lastModule].Statement = reachedNum + missedNum
 			items[lastModule].Percentage = getPercentageValue(
-				float64(reachedNum)/float64(reachedNum+missedNum)*100,
+				reachedNum,
+				reachedNum+missedNum,
 				*precisionFlag,
 			)
 			items[lastModule].DisplayFile = lastModule
@@ -524,7 +526,8 @@ func main() {
 	items[lastModule].Missed = missedNum
 	items[lastModule].Statement = reachedNum + missedNum
 	items[lastModule].Percentage = getPercentageValue(
-		float64(reachedNum)/float64(reachedNum+missedNum)*100.,
+		reachedNum,
+		reachedNum+missedNum,
 		*precisionFlag,
 	)
 	items[lastModule].DisplayFile = lastModule
@@ -567,7 +570,8 @@ func main() {
 			Missed:    totalMissedNum,
 			Excluded:  totalStatementNum - totalReachedNum - totalMissedNum,
 			Percentage: getPercentageValue(
-				float64(totalReachedNum)/float64(totalStatementNum)*100,
+				totalReachedNum,
+				totalStatementNum,
 				*precisionFlag,
 			),
 		},
