@@ -43,6 +43,7 @@ type CoverageResult struct {
 	StartColumn uint
 	EndLine     uint
 	EndColumn   uint
+	StmtCount   uint
 	Reached     bool
 }
 
@@ -364,8 +365,9 @@ func main() {
 		infos := strings.Split(words[0], ":")
 		module, startEnd := infos[0], infos[1]
 		startEnds := strings.Split(startEnd, ",")
+		stmtCountStr := words[1]
 		reached := words[2]
-		logger.Debug("cover result", "module", module, "start", startEnds[0], "end", startEnds[1], "reached", reached)
+		logger.Debug("cover result", "module", module, "start", startEnds[0], "end", startEnds[1], "stmt", stmtCountStr, "reached", reached)
 
 		s := strings.Split(startEnds[0], ".")
 		e := strings.Split(startEnds[1], ".")
@@ -389,6 +391,11 @@ func main() {
 			fmt.Println("error occurred:", err)
 			return
 		}
+		stmtCount, err := strconv.Atoi(stmtCountStr)
+		if err != nil {
+			fmt.Println("error occurred:", err)
+			return
+		}
 
 		cov := &CoverageResult{
 			Module:      module,
@@ -396,6 +403,7 @@ func main() {
 			StartColumn: uint(startColumn),
 			EndLine:     uint(endLine),
 			EndColumn:   uint(endColumn),
+			StmtCount:   uint(stmtCount),
 			Reached:     reached != "0",
 		}
 
@@ -433,11 +441,12 @@ func main() {
 	var allNum, totalAllNum uint
 	for _, cov := range coverResults {
 		if lastModule == "" {
+			// first cover line
 			if cov.Reached {
-				reachedNum += cov.EndLine - cov.StartLine
+				reachedNum += cov.StmtCount
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
-				missedNum += cov.EndLine - cov.StartLine
+				missedNum += cov.StmtCount
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 			lastModule = cov.Module
@@ -447,7 +456,6 @@ func main() {
 			items[lastModule].Missed = missedNum
 			items[lastModule].Statement = reachedNum + missedNum
 			items[lastModule].All = allNum
-			// items[lastModule].Excluded = allNum - reachedNum - missedNum
 			items[lastModule].Percentage = uint(math.Round(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
 			items[lastModule].DisplayFile = lastModule
 			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
@@ -457,16 +465,10 @@ func main() {
 			totalAllNum += allNum
 		} else if lastModule != "" && lastModule != cov.Module {
 			// for old module
-			allNum = lastCov.EndLine
-			if !lastCov.Reached {
-				allNum += 1
-			}
-			// reachedNum = allNum - missedNum
 			items[lastModule].Reached = reachedNum
 			items[lastModule].Missed = missedNum
 			items[lastModule].Statement = reachedNum + missedNum
 			items[lastModule].All = allNum
-			// items[lastModule].Excluded = allNum - reachedNum - missedNum
 			items[lastModule].Percentage = uint(math.Ceil(float64(reachedNum) / float64(reachedNum+missedNum) * 100))
 			items[lastModule].DisplayFile = lastModule
 			items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
@@ -483,6 +485,7 @@ func main() {
 				item:           items[lastModule],
 			}
 
+			allNum = cov.StmtCount
 			totalReachedNum += reachedNum
 			totalMissedNum += missedNum
 			totalStatementNum += reachedNum + missedNum
@@ -505,10 +508,10 @@ func main() {
 			}
 		} else {
 			if cov.Reached {
-				reachedNum += cov.EndLine - cov.StartLine
+				reachedNum += cov.StmtCount
 				reachedRanges = append(reachedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			} else {
-				missedNum += cov.EndLine - cov.StartLine
+				missedNum += cov.StmtCount
 				missedRanges = append(missedRanges, CoverRange{cov.StartLine, cov.EndLine})
 			}
 		}
