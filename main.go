@@ -434,6 +434,7 @@ func main() {
 
 	// summarize
 	items := make(map[string]*Item)
+	checkedModules := make(map[string]bool)
 	var lastModule string
 	var lastCov CoverageResult
 	var reachedNum, totalReachedNum uint
@@ -442,6 +443,9 @@ func main() {
 	var reachedRanges, missedRanges []CoverRange
 	// var excludedNum, totalExcludedNum uint
 	for _, cov := range coverResults {
+		if _, ok := checkedModules[cov.Module]; ok {
+			continue
+		}
 		if lastModule == "" {
 			// first cover line
 			if cov.Reached {
@@ -479,6 +483,7 @@ func main() {
 			items[lastModule].ReachedRanges = reachedRanges
 			items[lastModule].MissedRanges = missedRanges
 
+			checkedModules[lastModule] = true
 			logger.Debug("summary", "module", lastModule, "start", reachedNum, "end", missedNum)
 
 			wg.Add(1)
@@ -522,18 +527,20 @@ func main() {
 	}
 
 	// care of last item
-	items[lastModule].Reached = reachedNum
-	items[lastModule].Missed = missedNum
-	items[lastModule].Statement = reachedNum + missedNum
-	items[lastModule].Percentage = getPercentageValue(
-		reachedNum,
-		reachedNum+missedNum,
-		*precisionFlag,
-	)
-	items[lastModule].DisplayFile = lastModule
-	items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
-	items[lastModule].ReachedRanges = reachedRanges
-	items[lastModule].MissedRanges = missedRanges
+	if _, ok := checkedModules[lastModule]; !ok {
+		items[lastModule].Reached = reachedNum
+		items[lastModule].Missed = missedNum
+		items[lastModule].Statement = reachedNum + missedNum
+		items[lastModule].Percentage = getPercentageValue(
+			reachedNum,
+			reachedNum+missedNum,
+			*precisionFlag,
+		)
+		items[lastModule].DisplayFile = lastModule
+		items[lastModule].HtmlLink = flattenFilename(lastModule) + ".html"
+		items[lastModule].ReachedRanges = reachedRanges
+		items[lastModule].MissedRanges = missedRanges
+	}
 	logger.Debug("last", "module", lastModule, "reach", reachedNum, "missed", missedNum)
 	logger.Debug("last.percentage", "percentage", uint(math.Round(float64(reachedNum)/float64(reachedNum+missedNum)*100.)))
 
